@@ -1,0 +1,52 @@
+\documentclass[a4paper,twoside,11pt]{article}
+
+
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+
+\usepackage{pdfpages}
+
+\usepackage{xstring}
+
+\usepackage{graphicx}
+
+
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+
+
+\usepackage{breqn}
+
+
+\input{myCommon.tex}
+
+
+\renewcommand{\vec}[1]{\mathbf{#1}}
+
+
+
+\begin{document}
+
+\newcommand{\semester}{SS2015}
+
+\pagestyle{myheadings}
+\markboth{GEOEEM \\ Exercise \theSheetNo \\ \semester}
+         {\catsubtitle \\ Justus Sagem\"uller (4762282)}
+
+% \definecolor{background}{RGB}{240,230,192}
+
+\begin{center}
+  \begin{Huge}\textbf{Electromagnetic Exploration Methods, Exercise \theSheetNo}\end{Huge}
+  \\
+  \begin{Large}Lecture B\"ulent Tezkan \\ \semester\end{Large}
+\end{center}
+
+
+\renewcommand{\thesection}{\theSheetNo.\arabic{section}}
+\renewcommand{\thesubsection}{\alph{subsection})}
+\renewcommand{\theenumi}{\textit(\roman{enumi}\textit)}
+
+\newcommand{\exno}[2][\value{section}+1]{\setcounter{section}{#1-1}\section{#2}}
+\newcommand{\subex}[2][\value{subsection}+1]{\setcounter{subsection}{#1-1}\subsection{#2}}
