@@ -1,5 +1,6 @@
 # TTNTEX=tutor-notes.tex
 # TTNPDF=tutor-notes.pdf
+SLTNHS=soltn.hs
 SLTNTEX=soltn.tex
 SLTNPDF=soltn.pdf
 
@@ -24,8 +25,10 @@ lectures: $(foreach dir, $(wildcard lect*), $(dir)/$(LECTTEX))
 # tutornotes: ex02/$(TTNPDF) ex04/$(TTNPDF) ex05/$(TTNPDF) ex06/$(TTNPDF) ex07/$(TTNPDF) ex08/$(TTNPDF) ex09/$(TTNPDF)
 .PHONY: tutornotes
 
+ex%/$(SLTNTEX): ex%/$(SLTNHS) Makefile
+	runhaskell $< > $@
 
-ex%/$(SLTNPDF): ex%/$(SLTNTEX) def-header-exerc.tex Makefile
+ex%/$(SLTNPDF): ex%/$(SLTNTEX) def-header-exerc.tex
 	sh -c 'sed "s/\\\\theSheetNo/$*/g;s/\\\\catsubtitle//g" def-header-exerc.tex; sed "s/^ *\\\\\]/\\\\end{dmath\\*}/;s/^ *\\\\\[/\\\\begin{dmath\\*}/" $<; echo "\\end{document}"' > $<-full.tex
 	$(TEXC) $<-full.tex
 	rm $<-full.tex
