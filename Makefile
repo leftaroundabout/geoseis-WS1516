@@ -12,6 +12,7 @@ LECTPDF=transscr.pdf
 
 TEXC=xelatex_halt-on-error
 
+HaTeXHEAD=LaTeX/GeoSeisExercise.hs
 
 all: solutions # $(LECTPDF)
 .PHONY: all
@@ -25,7 +26,7 @@ lectures: $(foreach dir, $(wildcard lect*), $(dir)/$(LECTTEX))
 # tutornotes: ex02/$(TTNPDF) ex04/$(TTNPDF) ex05/$(TTNPDF) ex06/$(TTNPDF) ex07/$(TTNPDF) ex08/$(TTNPDF) ex09/$(TTNPDF)
 .PHONY: tutornotes
 
-ex%/$(SLTNTEX): ex%/$(SLTNHS) Makefile
+ex%/$(SLTNTEX): ex%/$(SLTNHS) Makefile $(HaTeXHEAD)
 	runhaskell $< > $@
 
 ex%/$(SLTNPDF): ex%/$(SLTNTEX) def-header-exerc.tex

@@ -8,15 +8,48 @@ import Control.Monad
 
 main :: ExerciseSheet
 main = mkSolutionSheet $ do
+   "Given is the following data from GPS stations near the San Andreas Fault: west of the fault (on the Pacific Plate),"
+   lnbk
+   displayGPSStations gpsStationsWest
+   lnbk
+   "and east of it (North American Plate):"
+   lnbk
+   displayGPSStations gpsStationsEast
+   lnbk
    taskNo 1 "" $ do
-      "Given is the following data from GPS stations near the San Andreas Fault: west of the fault (on the Pacific Plate),"
-      lnbk
-      displayGPSStations gpsStationsWest
-      lnbk
-      "and east of it (North American Plate):"
-      lnbk
-      displayGPSStations gpsStationsEast
-      lnbk
+      "The two station nearest to the fault, on either side, seem to be POSO and TWR2. "
+      let Just poso = lookup "POSO" gpsStationsWest
+          Just twr2 = lookup "TWR2" gpsStationsEast
+      "The rate of slippage between two such stations can be calculated as"
+      mathDisplay $ "v"!|"c" =: "v"!:(dblPipe<>2) - "v"!:(dblPipe<>1)
+      "with uncertainty"
+      mathDisplay $ sigma<>"v"!|"c" =: tsqrt Nothing (
+                   ( sigma<>"v"!:(dblPipe<>1))^:2 + (sigma<>"v"!:(dblPipe<>2))^:2 )
+                   <> "."
+      "For these two stations, that comes out as"
+      let CounterSlip v vU = sr_2stations twr2 poso
+      mathDisplay $ "v"!|"c|POSO,TWR2" =: (v ± vU) <> physU(tfrac"mm""yr")
+      "With such a large uncertainty, this is hardly a useful value."
+   taskNo 3 "" $ do
+      "We ignore the individual uncertainties of the stations, and "
+      "take the average of all stations west, and east of the fault respectively, "
+      "each with uncertainty from the standard deviation."
+      [vWest, vEast] <- forM [(gpsStationsWest, "west"), (gpsStationsEast, "east")]
+                        $ \(sta, dir) -> do
+          let slip@(AbsSlip spa spaU _ _) = gpsStations_Average sta
+          mathDisplay $ "v"!|dir =: (spa ± spaU) <> physU(tfrac"mm""yr")
+          return slip
+      "The slip difference between these is"
+      let CounterSlip v vU = sr_2stations vEast vWest
+      mathDisplay $ "v"!|"ca" =: (v ± vU) <> physU(tfrac"mm""yr")
+   taskNo 5 "" $ do
+      "In the following use a slip rate of "
+      mathDisplay $ "v"!|"c" =: "v"!|"Schmӓlzle"
+                             =: (36 ± 2) <> physU(tfrac"mm""yr")
+      "Given is an empirical relation between slip and fault length"
+      mathDisplay $ logBase 10 2
+      
+      
 
 
 
@@ -25,7 +58,7 @@ displayGPSStations stats =
    tabular Nothing (replicate 3 CenterColumn) $ do
       "Site" & "Fault ||" & ("Fault "<>math bot)
       lnbk<>hline
-      "Name" & "Rate" & "Rate"
+      "Name" & "Rate [mm/yr]" & "Rate [mm/yr]"
       lnbk<>hline
       forM_ stats $ \(nm, AbsSlip spa spaU spe speU) -> do
           fromString nm & math(fromString(show spa) +- fromString(show spaU))
@@ -40,7 +73,7 @@ data AbsSlip = AbsSlip {
      } deriving (Show)
 
 type GPStations = [(String, AbsSlip)]
-       
+
 gpsStationsWest, gpsStationsEast :: GPStations
 gpsStationsWest = [ ("A504", AbsSlip 37.5 0.6 3.0 0.4)
                   , ("A505", AbsSlip 42.9 1.4 4.1 0.5)
@@ -66,8 +99,8 @@ gpsStations_Average :: GPStations -> AbsSlip
 gpsStations_Average stats = AbsSlip spa spaU spe speU
  where [spa,spe] = [ (/n) . sum $ extrSlip <$> absSlips
                    | extrSlip <- [slipParl, slipPerp] ]
-       [spaU,speU] = [ sqrt . (/n) . sum $ ((^2) . extrUncrt) <$> absSlips
-                     | extrUncrt <- [spaUncert, speUncert] ]
+       [spaU,speU] = [ sqrt . (/n) . sum $ ((^2) . (spa-) . extrSlip) <$> absSlips
+                     | extrSlip <- [slipParl, slipPerp] ]
        n = fromIntegral $ length stats
        absSlips = snd <$> stats
 
