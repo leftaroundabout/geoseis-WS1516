@@ -10,8 +10,11 @@ module LaTeX.GeoSeisExercise
                , mkSolutionSheet
                , task, taskNo
                , (±)
-               , physU
+               , realNum
+               , physU, (*|:)
                , (!|)
+               , printf
+               , ℝ
                ) where
 
 import Text.LaTeX
@@ -45,14 +48,24 @@ task t e = section (fromLaTeX t) >> e
 infixl 6 ±
 (±) :: Double -> Double -> ExerciseSnippet ()
 a ± σa = autoParens
-         $ fromString (printf "%.*g" ndig a) +- fromString (printf "%.1g" σa)
+         $ fromString (printf "%.*g" ndig a) +- fromString (printf "%.*g" ndig σa)
  where ndig = round $ logBase 10 (1/σa) + 1.5   :: Int -- ???
 
 physU :: ExerciseFunction
 physU = comm1 "physu"
 
+infixl 6 *|:
+(*|:) :: ExerciseInfix
+v*|:u = v <> physU u
+
+realNum :: Double -> ExerciseSnippet ()
+realNum = fromString . reverse . dropWhile (=='0') . reverse . printf "%.10g"
+
 
 (!|) :: ExerciseSnippet () -> String -> ExerciseSnippet ()
 q!|c | all isUpper c  = q !: mathrm(""!:fromString c)
      | otherwise      = q !: mathrm (fromString c)
+
+
+type ℝ = Double
 

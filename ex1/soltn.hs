@@ -31,9 +31,9 @@ main = mkSolutionSheet $ do
       mathDisplay $ "v"!|"c|POSO,TWR2" =: (v ± vU) <> physU(tfrac"mm""yr")
       "With such a large uncertainty, this is hardly a useful value."
    taskNo 3 "" $ do
-      "We ignore the individual uncertainties of the stations, and "
-      "take the average of all stations west, and east of the fault respectively, "
-      "each with uncertainty from the standard deviation."
+      "We ignore the individual uncertainties of the stations, and"
+      " take the average of all stations west, and east of the fault respectively,"
+      " each with uncertainty from the standard deviation."
       [vWest, vEast] <- forM [(gpsStationsWest, "west"), (gpsStationsEast, "east")]
                         $ \(sta, dir) -> do
           let slip@(AbsSlip spa spaU _ _) = gpsStations_Average sta
@@ -44,10 +44,44 @@ main = mkSolutionSheet $ do
       mathDisplay $ "v"!|"ca" =: (v ± vU) <> physU(tfrac"mm""yr")
    taskNo 5 "" $ do
       "In the following use a slip rate of "
-      mathDisplay $ "v"!|"c" =: "v"!|"Schmӓlzle"
-                             =: (36 ± 2) <> physU(tfrac"mm""yr")
-      "Given is an empirical relation between slip and fault length"
-      mathDisplay $ logBase 10 2
+      let vSchmӓlzle = 36; vSchmU = 2
+      mathDisplay $ "v"!|"c" =: "v"!|"Schmlzl"
+                             =: (vSchmӓlzle ± vSchmU) *|: tfrac"mm""yr"
+      let avgRec = 205  :: Floating n => n
+      "Over the average recurrence interval for Californian earthquakes of "
+      math avgRec >> " yr, "
+      "this amounts to a displacement of"
+      let dA = vSchmӓlzle * avgRec / 1000
+      mathDisplay $ "d"!|"A" =: (avgRec*|:"yr") `cdot` "v"!|"c"
+                             =: (dA ± vSchmU * avgRec / 1000) *|: "m"
+      "The uncertainty is not really meaningful here, since the recurrence rate is"
+      " probably not so accurately known; we will ignore it in the following."
+      lnbk
+      "Given is an empirical relation between rupture length of various faults on earth,"
+      " and the corresponding slip displacement per event."
+      let logDisplc0 = -1.43
+          logDisplcSlope = 0.88
+          e = exp 1
+      mathDisplay $ logBase 10 ("d"!|"A" / physU"m")
+                       =: realNum logDisplc0
+                          + realNum logDisplcSlope `cdot` logBase 10 ("l"!|"SR" / physU"km")
+      "Inverting this relation yields"
+      let logRupllen0 = - logDisplc0 * logRupllenSlope
+          logRupllenSlope = recip logDisplcSlope
+      mathDisplay $ logBase 10 ("l"!|"SR" / physU"km")
+                       =: realNum logRupllen0
+                           + realNum logRupllenSlope `cdot` logBase 10 ("d"!|"A" / physU"m")
+      "which gives an estimate for the surface rupture length of the San Andreas Fault:"
+      let ruptlen = 10**(logRupllen0 + logRupllenSlope * logBase 10 dA) :: Double
+      mathDisplay $ "l"!|"SR" =: fromString (printf "%.2g" ruptlen) *|: "km"
+      "Also given:"
+      let momMag0 = 5.08
+          momMagSlope = 1.16
+      mathDisplay $ "M" =: realNum momMag0
+                           + realNum momMagSlope `cdot` logBase 10 ("l"!|"SR")
+      "Which gives"
+      let momMag = momMag0 + momMagSlope * logBase 10 ruptlen
+      mathDisplay $ "M" =: fromString (printf "%.2g" momMag)<>"."
       
       
 
@@ -99,10 +133,8 @@ gpsStations_Average :: GPStations -> AbsSlip
 gpsStations_Average stats = AbsSlip spa spaU spe speU
  where [spa,spe] = [ (/n) . sum $ extrSlip <$> absSlips
                    | extrSlip <- [slipParl, slipPerp] ]
-       [spaU,speU] = [ sqrt . (/n) . sum $ ((^2) . (spa-) . extrSlip) <$> absSlips
+       [spaU,speU] = [ sqrt . (/(n-1)) . sum $ ((^2) . (spa-) . extrSlip) <$> absSlips
                      | extrSlip <- [slipParl, slipPerp] ]
        n = fromIntegral $ length stats
        absSlips = snd <$> stats
-
-type ℝ = Double
 
