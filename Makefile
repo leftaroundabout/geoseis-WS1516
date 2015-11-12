@@ -18,7 +18,7 @@ all: solutions # $(LECTPDF)
 .PHONY: all
 
 
-solutions: $(foreach dir, $(wildcard ex*), $(dir)/$(SLTNPDF))
+solutions: $(foreach dir, $(wildcard Ex*), $(dir)/$(SLTNPDF))
 .PHONY: solutions
 
 lectures: $(foreach dir, $(wildcard lect*), $(dir)/$(LECTTEX))
@@ -26,10 +26,10 @@ lectures: $(foreach dir, $(wildcard lect*), $(dir)/$(LECTTEX))
 # tutornotes: ex02/$(TTNPDF) ex04/$(TTNPDF) ex05/$(TTNPDF) ex06/$(TTNPDF) ex07/$(TTNPDF) ex08/$(TTNPDF) ex09/$(TTNPDF)
 .PHONY: tutornotes
 
-ex%/$(SLTNTEX): Ex%/$(SLTNHS) Makefile $(HaTeXHEAD)
+Ex%/$(SLTNTEX): Ex%/$(SLTNHS) Makefile $(HaTeXHEAD)
 	runhaskell $< > $@
 
-ex%/$(SLTNPDF): Ex%/$(SLTNTEX) def-header-exerc.tex
+Ex%/$(SLTNPDF): Ex%/$(SLTNTEX) def-header-exerc.tex
 	sh -c 'sed "s/\\\\theSheetNo/$*/g;s/\\\\catsubtitle//g" def-header-exerc.tex; sed "s/^ *\\\\\]/\\\\end{dmath\\*}/;s/^ *\\\\\[/\\\\begin{dmath\\*}/" $<; echo "\\end{document}"' > $<-full.tex
 	$(TEXC) $<-full.tex
 	rm $<-full.tex

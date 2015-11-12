@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings, NoMonomorphismRestriction, ScopedTypeVariables #-}
 {-# LANGUAGE ConstraintKinds, TypeFamilies, FlexibleInstances, UndecidableInstances #-}
 
+module Ex1.Solution where
 
 import LaTeX.GeoSeisExercise
 import Control.Monad
