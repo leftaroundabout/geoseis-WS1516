@@ -7,3 +7,5 @@ soltn.pdf
 *.cpt
 transscr.tex
 *~
+tmpoutput.tex
+#*
