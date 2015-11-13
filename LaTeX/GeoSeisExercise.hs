@@ -6,22 +6,28 @@ module LaTeX.GeoSeisExercise
                , module Text.LaTeX.Packages.AMSMath
                , module Text.LaTeX.Packages.AMSFonts
                , module Text.LaTeX.Packages.Graphicx
+               , module Data.Ord, module Data.List
+               , (&)
                , module Data.VectorSpace, module Data.AffineSpace
                , module Graphics.Dynamic.Plot.R2
                , ExerciseSheet, ExerciseSnippet
                , mkSolutionSheet
                , task, taskNo
-               , Uncertain((:±)), withUncertainty, (±), errorBarsPlot
+               , items
+               , Uncertain(..), withUncertainty, (±), errorBarsPlot
                , realNum
                , physU, (*|:)
                , (!|)
+               , (&:)
                , printf
                , ℝ
+               , levMarFit
                ) where
 
-import Text.LaTeX
+import Text.LaTeX hiding ((&))
+import qualified Text.LaTeX
 import Text.LaTeX.Base.Class
-import Text.LaTeX.Base.Commands
+import Text.LaTeX.Base.Commands hiding ((&))
 import Text.LaTeX.Packages.AMSMath
 import Text.LaTeX.Packages.AMSFonts
 import Text.LaTeX.Packages.Graphicx
@@ -31,6 +37,9 @@ import Text.Printf
 import qualified Data.Text.IO as Text
 
 import Data.Char (isUpper)
+import Data.Ord (comparing)
+import Data.Function ((&))
+import Data.List (minimumBy, maximumBy)
 
 import Graphics.Dynamic.Plot.R2
 import Diagrams.Prelude ((^&), (#))
@@ -41,6 +50,8 @@ import Data.VectorSpace
 
 import qualified Numeric.AD as AD
 import qualified Numeric.GSL.Fitting as GSL
+
+import Control.Monad
 
 type ExerciseSheet = IO ()
 type ExerciseSnippet = LaTeXT IO
@@ -58,6 +69,12 @@ instance RealFloat r => AdditiveGroup (Uncertain r) where
 instance RealFloat r => VectorSpace (Uncertain r) where
   type Scalar (Uncertain r) = r
   μ *^ (a:±σ) = μ*a :± abs μ*σ
+instance RealFloat r => Eq (Uncertain r) where
+  a:±σa == b:±σb = a+σa > b-σb && a-σa < b+σb
+instance RealFloat r => Ord (Uncertain r) where
+  compare a b | a==b                     = EQ
+              | expected a < expected b  = LT
+              | otherwise                = GT
 
 errorBarsPlot :: [(Uncertain ℝ, Uncertain ℝ)] -> DynamicPlottable
 errorBarsPlot ps = plot
@@ -93,20 +110,27 @@ v*|:u = v <> physU u
 realNum :: Double -> ExerciseSnippet ()
 realNum = fromString . reverse . dropWhile (=='0') . reverse . printf "%.10g"
 
+items :: [ExerciseSnippet ()] -> ExerciseSnippet ()
+items itmz = itemize . forM_ itmz $ \i -> item Nothing >> i
 
 (!|) :: ExerciseSnippet () -> String -> ExerciseSnippet ()
 q!|c | all isUpper c  = q !: mathrm(""!:fromString c)
      | otherwise      = q !: mathrm (fromString c)
 
 
+infixl 1 &:
+(&:) :: LaTeXC l => l -> l -> l
+(&:) = (Text.LaTeX.&)
+
 type ℝ = Double
 
 
 levMarFit :: (∀ x . Floating x => [x] -> x -> x)
-             -> [(ℝ, Uncertain ℝ)] -> [ℝ] -> [Uncertain ℝ]
+             -> [(ℝ, Uncertain ℝ)] -> [Uncertain ℝ] -> [Uncertain ℝ]
 levMarFit f ps = map (uncurry(:±)) . fst
               . GSL.fitModelScaled 1e-4 1e-4 20 (ff,dff)
                       [(t, ([y], σy)) | (t, y:±σy)<-ps]
+              . map expected
  where ff xs t = [(f :: [ℝ]->ℝ->ℝ) xs t]
        dff xs t = [tail $ (AD.grad (\(t':xs') -> f xs' t') :: [ℝ] -> [ℝ]) (t:xs)]
        

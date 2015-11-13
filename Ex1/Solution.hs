@@ -91,13 +91,13 @@ main = mkSolutionSheet $ do
 displayGPSStations :: forall m . (Monad m) => GPStations -> LaTeXT m ()
 displayGPSStations stats =
    tabular Nothing (replicate 3 CenterColumn) $ do
-      "Site" & "Fault ||" & ("Fault "<>math bot)
+      "Site" &: "Fault ||" &: ("Fault "<>math bot)
       lnbk<>hline
-      "Name" & "Rate [mm/yr]" & "Rate [mm/yr]"
+      "Name" &: "Rate [mm/yr]" &: "Rate [mm/yr]"
       lnbk<>hline
       forM_ stats $ \(nm, AbsSlip spa spaU spe speU) -> do
-          fromString nm & math(fromString(show spa) +- fromString(show spaU))
-                        & math(fromString(show spe) +- fromString(show speU))
+          fromString nm &: math(fromString(show spa) +- fromString(show spaU))
+                        &: math(fromString(show spe) +- fromString(show speU))
           lnbk
          
                              
