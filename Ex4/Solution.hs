@@ -47,8 +47,25 @@ main = mkSolutionSheet $ do
       mathDisplay $ "R" =: tau * (("v"!|"p"^:2)/("v"!|"p"`cdot`sqrt 3 - "v"!|"p"))
                         =: tau * ("v"!|"p"/(sqrt 3 - 1))
    taskNo 4 "" $ do
-      "To infer"
-                                  
+      "To infer propagated errors through a formula, consider the usuall Gaussian"
+      " error propagation for statistically independent deviations."
+   taskNo 5 "" $ do
+      let vp = 6000 :± 500
+      "Assume now ">>math("v"!|"p" =: withUncertainty vp *|: "m"/"s")>>"."
+      " This gives rise to the following distances of the stations from the epicenter:"
+      newline
+      forM_ seisStations $ \(SeisStation name _ tp ts) -> do
+         fromString name >> ": "
+         let r = vp * (ts - tp) / (sqrt 3 - 1)
+         math $ "R" =: withUncertainty r *|: "m"
+         ", or ">>math (withUncertainty (distToPx r) *|: "Px")>>"."
+         newline
+   taskNo 6 "" $ do
+      "Graphically intersecting the circles of these distances from the stations gives"
+      " an epicenter location of ("
+      let (coX, coY) = px2coords (461.27:±15, 98.3:±13)
+      math (showLatitude coY) >> ", " >> math (showLongitude coX) >> ")."
+      
       
 data SeisStation = SeisStation {
         seisStat_Name :: String
@@ -56,12 +73,16 @@ data SeisStation = SeisStation {
       , seisStat_tp, seisStat_ts :: Uncertain Time
       }
 
+type Distance = ℝ -- in m
+
+type Speed = ℝ -- in m/s
+
 type Time = ℝ -- in seconds after 5:19 on the day of the earthquake
 
 type Px = Double
 
-coords2px :: (Uncertain Latitude, Uncertain Longitude) -> (Uncertain ℝ, Uncertain ℝ)
-px2coords :: (Uncertain ℝ, Uncertain ℝ) -> (Uncertain Latitude, Uncertain Longitude)
+coords2px :: (Uncertain Latitude, Uncertain Longitude) -> (Uncertain Px, Uncertain Px)
+px2coords :: (Uncertain Px, Uncertain Px) -> (Uncertain Latitude, Uncertain Longitude)
 (coords2px, px2coords)
          = (\(cy,cx) -> ( px + (cx-ex)*(qx-px)/(fx-ex), py + (cy-ey)*(qy-py)/(fy-ey) )
            ,\(tx,ty) -> ( ey + (ty-py)*(fy-ey)/(qy-py), ex + (tx-px)*(fx-ex)/(qx-px) ) )
@@ -69,6 +90,8 @@ px2coords :: (Uncertain ℝ, Uncertain ℝ) -> (Uncertain Latitude, Uncertain Lo
          = [ ((185.64, 138.09), (exactly 50.5°N, 6°E))
            , ((585.94, 453.91), (exactly 51.5°N, 8°E)) ]
 
+distToPx :: Uncertain Distance -> Uncertain Px
+distToPx = (*146.92) . (/exactly 50e+3)
 
 seisStations :: [SeisStation]
 seisStations = [ SeisStation "BGG" (50.206°N, 7.337°E) (7.55:±0.1)  (10.15:±0.1)

@@ -25,6 +25,7 @@ module LaTeX.GeoSeisExercise
                , ℝ
                , levMarFit
                , Latitude, Longitude, (°), LatitudeDirection(..), LongitudeDirection(..)
+                    , showLatitude, showLongitude
                ) where
 
 import Text.LaTeX hiding ((&))
@@ -95,6 +96,8 @@ instance RealFloat r => Fractional (Uncertain r) where
   recip (x:±σx) = recip x :± σx/x^2
 instance RealFloat r => Floating (Uncertain r) where
   pi = fromRational 3.141592653589793
+  sqrt (x:±σx) = sqrtx :± σx/(2*sqrtx)
+   where sqrtx = sqrt x
 
 deciRound :: RealFloat r => Uncertain r -> r
 deciRound (x:±σx) = (*e) . fromIntegral . round $ x / e
@@ -133,7 +136,7 @@ task t e = section (fromLaTeX t) >> e
 infixl 6 ±, :±
 (±) :: Double -> Double -> ExerciseSnippet ()
 a ± σa = autoParens
-         $ fromString (printf "%.*g" ndig a) +- fromString (printf "%.*g" ndig σa)
+         $ fromString (printf "%.*f" ndig a) +- fromString (printf "%.*f" ndig σa)
  where ndig = round $ logBase 10 (1/σa) + 1.5   :: Int -- ???
 
 physU :: ExerciseFunction
@@ -185,6 +188,10 @@ instance CoordDirection LongitudeDirection where
 type Latitude = ℝ
 type Longitude = ℝ
   
+showLatitude :: Uncertain Latitude -> ExerciseSnippet ()
+showLatitude θ | θ>0  = withUncertainty (θ*180/pi) >> ""^:(circ"""") >> physU "N"
+showLongitude :: Uncertain Longitude -> ExerciseSnippet ()
+showLongitude λ | λ>0  = withUncertainty (λ*180/pi) >> ""^:(circ"""") >> physU "E"
        
 infixl 9 ⎛
 (⎛) :: Brakey b => (b->c) -> b -> c
