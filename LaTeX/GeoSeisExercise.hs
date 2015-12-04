@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies, RankNTypes, UnicodeSyntax #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 
 module LaTeX.GeoSeisExercise
@@ -14,14 +15,16 @@ module LaTeX.GeoSeisExercise
                , mkSolutionSheet
                , task, taskNo
                , items
-               , Uncertain(..), withUncertainty, (±), errorBarsPlot
+               , Uncertain(..), withUncertainty, exactly, (±), errorBarsPlot
                , realNum
                , physU, (*|:)
                , (!|)
                , (&:)
+               , (⎛), brak
                , printf
                , ℝ
                , levMarFit
+               , Latitude, Longitude, (°), LatitudeDirection(..), LongitudeDirection(..)
                ) where
 
 import Text.LaTeX hiding ((&))
@@ -47,6 +50,7 @@ import qualified Diagrams.Prelude as Dia
 
 import Data.AffineSpace
 import Data.VectorSpace
+import Data.Ratio
 
 import qualified Numeric.AD as AD
 import qualified Numeric.GSL.Fitting as GSL
@@ -62,8 +66,11 @@ type ExerciseInfix = ExerciseSnippet () -> ExerciseSnippet () -> ExerciseSnippet
 
 data Uncertain v = (:±) {expected, uncertainty :: v}
 
+exactly :: Num v => v -> Uncertain v
+exactly = (:±0)
+
 instance RealFloat r => AdditiveGroup (Uncertain r) where
-  zeroV = 0 :± 0
+  zeroV = exactly 0
   negateV (a:±σ) = negate a :± σ
   (a:±σa) ^+^ (b:±σb) = (a+b) :± sqrt(σa^2 + σb^2)
 instance RealFloat r => VectorSpace (Uncertain r) where
@@ -75,6 +82,35 @@ instance RealFloat r => Ord (Uncertain r) where
   compare a b | a==b                     = EQ
               | expected a < expected b  = LT
               | otherwise                = GT
+
+instance RealFloat r => Num (Uncertain r) where
+  fromInteger = (:±0) . fromInteger
+  negate = negateV
+  (+) = (^+^)
+  (x:±σx)*(y:±σy) = x*y :± sqrt((x*σy)^2 + (σx*y)^2)
+  abs (x:±σx) = abs x:±σx
+  signum (x:±_) = signum x:±0
+instance RealFloat r => Fractional (Uncertain r) where
+  fromRational fr = (fromIntegral(numerator fr):±1) / fromIntegral(denominator fr)
+  recip (x:±σx) = recip x :± σx/x^2
+instance RealFloat r => Floating (Uncertain r) where
+  pi = fromRational 3.141592653589793
+
+deciRound :: RealFloat r => Uncertain r -> r
+deciRound (x:±σx) = (*e) . fromIntegral . round $ x / e
+ where e = 10^^(floor $ logBase 10 σx)
+instance (Show r, RealFloat r) => Show (Uncertain r) where
+  show = reverse . dropWhile(=='e') . cleanup . ('e':) . reverse . show . deciRound
+   where cleanup ('e':_:s@('9':'9':'9':_)) = kill9s s
+         cleanup ('e':_:s@('0':'0':'0':_)) = kill0s s
+         cleanup (c:s) = c : cleanup s
+         cleanup [] = []
+         kill9s ('9':s) = kill9s s
+         kill9s (d:s) | d`elem`['0'..'8'] = succ d : s
+         kill9s ('.':s) = let sk = kill9s s
+                          in replicate (length s - length sk) '0' ++ sk
+         kill9s s = '1':s
+         kill0s = dropWhile (=='0')
 
 errorBarsPlot :: [(Uncertain ℝ, Uncertain ℝ)] -> DynamicPlottable
 errorBarsPlot ps = plot
@@ -133,4 +169,28 @@ levMarFit f ps = map (uncurry(:±)) . fst
               . map expected
  where ff xs t = [(f :: [ℝ]->ℝ->ℝ) xs t]
        dff xs t = [tail $ (AD.grad (\(t':xs') -> f xs' t') :: [ℝ] -> [ℝ]) (t:xs)]
+
+
+data LatitudeDirection = N | S
+data LongitudeDirection = E | W
+
+class CoordDirection d where
+  (°) :: Floating r => r -> d -> r
+infixl 8 °
+instance CoordDirection LatitudeDirection where
+  θ°N = θ*pi/180; θ°S = - θ*pi/180
+instance CoordDirection LongitudeDirection where
+  λ°E = λ*pi/180; λ°W = - λ*pi/180
+
+type Latitude = ℝ
+type Longitude = ℝ
+  
        
+infixl 9 ⎛
+(⎛) :: Brakey b => (b->c) -> b -> c
+f⎛x = f $ brak x
+
+class Num b => Brakey b where brak :: b -> b
+instance Brakey Int where brak = id
+instance Brakey Double where brak = id
+instance Monad m => Brakey (LaTeXT m ()) where brak = autoParens
