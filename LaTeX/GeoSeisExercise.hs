@@ -5,12 +5,14 @@
 module LaTeX.GeoSeisExercise
                ( module Text.LaTeX
                , module Text.LaTeX.Packages.AMSMath
+               , mathDisplay', mathDisplay''
                , module Text.LaTeX.Packages.AMSFonts
                , module Text.LaTeX.Packages.Graphicx
                , module Data.Ord, module Data.List
                , (&)
                , module Data.VectorSpace, module Data.AffineSpace
                , module Graphics.Dynamic.Plot.R2
+               , module Control.Arrow, module Control.Monad
                , ExerciseSheet, ExerciseSnippet
                , mkSolutionSheet
                , task, taskNo
@@ -21,7 +23,7 @@ module LaTeX.GeoSeisExercise
                , (!|)
                , (&:)
                , (⎛), brak
-               , printf
+               , printf, showInTeX
                , ℝ
                , levMarFit
                , Latitude, Longitude, (°), LatitudeDirection(..), LongitudeDirection(..)
@@ -57,6 +59,9 @@ import qualified Numeric.AD as AD
 import qualified Numeric.GSL.Fitting as GSL
 
 import Control.Monad
+import Control.Arrow
+
+import Numeric (readFloat)
 
 type ExerciseSheet = IO ()
 type ExerciseSnippet = LaTeXT IO
@@ -99,11 +104,19 @@ instance RealFloat r => Floating (Uncertain r) where
   sqrt (x:±σx) = sqrtx :± σx/(2*sqrtx)
    where sqrtx = sqrt x
 
+instance (RealFloat r) => Read (Uncertain r) where
+  readsPrec p s | '.'`elem`s  = first fromRational <$> readFloat s
+                | otherwise   = first fromInteger <$> readsPrec p s
+  
+
 deciRound :: RealFloat r => Uncertain r -> r
 deciRound (x:±σx) = (*e) . fromIntegral . round $ x / e
  where e = 10^^(floor $ logBase 10 σx)
+
 instance (Show r, RealFloat r) => Show (Uncertain r) where
-  show = reverse . dropWhile(=='e') . cleanup . ('e':) . reverse . show . deciRound
+  show (x:±0) | xi<-round x, x==fromInteger xi = show xi
+              | otherwise   = show x
+  show xu = reverse . dropWhile(=='e') . cleanup . ('e':) . reverse . show $ deciRound xu
    where cleanup ('e':_:s@('9':'9':'9':_)) = kill9s s
          cleanup ('e':_:s@('0':'0':'0':_)) = kill0s s
          cleanup (c:s) = c : cleanup s
@@ -114,6 +127,10 @@ instance (Show r, RealFloat r) => Show (Uncertain r) where
                           in replicate (length s - length sk) '0' ++ sk
          kill9s s = '1':s
          kill0s = dropWhile (=='0')
+
+
+showInTeX :: (Show a, LaTeXC l) => a -> l
+showInTeX = fromString . show
 
 errorBarsPlot :: [(Uncertain ℝ, Uncertain ℝ)] -> DynamicPlottable
 errorBarsPlot ps = plot
@@ -192,6 +209,14 @@ showLatitude :: Uncertain Latitude -> ExerciseSnippet ()
 showLatitude θ | θ>0  = withUncertainty (θ*180/pi) >> ""^:(circ"""") >> physU "N"
 showLongitude :: Uncertain Longitude -> ExerciseSnippet ()
 showLongitude λ | λ>0  = withUncertainty (λ*180/pi) >> ""^:(circ"""") >> physU "E"
+
+-- | Display an equation and followed by a comma.
+mathDisplay' :: LaTeXC r => r -> r
+mathDisplay' e = mathDisplay $ e<>","
+
+-- | Display an equation and followed by a full stop.
+mathDisplay'' :: LaTeXC r => r -> r
+mathDisplay'' e = mathDisplay $ e<>"."
        
 infixl 9 ⎛
 (⎛) :: Brakey b => (b->c) -> b -> c

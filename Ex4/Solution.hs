@@ -1,10 +1,9 @@
 {-# LANGUAGE OverloadedStrings, NoMonomorphismRestriction, ScopedTypeVariables #-}
 {-# LANGUAGE ConstraintKinds, TypeFamilies, FlexibleInstances, UndecidableInstances #-}
 
-module Ex2.Solution where
+module Ex5.Solution where
 
 import LaTeX.GeoSeisExercise
-import Ex1.Solution (AbsSlip(..))
 
 import Numeric.AD
 import Numeric.GSL.Fitting
@@ -15,90 +14,60 @@ import Control.Monad
 main :: ExerciseSheet
 main = mkSolutionSheet $ do
    taskNo 1 "" $ do
-      "The pixel coordinates of the given seismic stations are">>newline
-      forM_ seisStations $ \(SeisStation name pos _ _) -> do
-         fromString $ show (name, coords2px pos)
-         newline
+     "Given is a ground model with an infinitely deep layer with wave speed ">>math("v"!:2)
+     " below a layer of height ">>math"D">>" with wave speed ">>math("v"!:1)>>"."
+     " In such a case there will always be a direct waves and reflected waves"
+     " that both start from- and reach back to the surface. The direct wave simply gets"
+     " to a distance of ">>math("v"!:1`cdot`"t")>>" by time ">>math"t">>", so the travel"
+     " time to position ">>math"x">>" is"
+     mathDisplay'' $ "t"!|"direct" =: "x"/"v"!:1
+     "The reflected ray has to travel a path "
+     mathDisplay $ "d"!|"refl" =: 2`cdot`sqrt("D"^:2 + brak("x"/2)^:2)
+     " and also has always the speed ">>math("v"!:1)>>", so take a time of"
+     mathDisplay'' $ "t"!|"refl" =: (2`cdot`sqrt("D"^:2 + brak("x"/2)^:2))/"v"!:1
+     "If ">>math("v"!:2>:"v"!:1)>>", then there will also be a critically refracted wave"
+     " to the surface. This always goes down, as well as up, in the critical angle with"
+     mathDisplay'' $ sin(theta!|"c") =: "v"!:1/"v"!:2
+     "The ray thus travels a horizontal distance component of"
+     mathDisplay $ "x"!|"dcrit" =: "D"`cdot`tan(theta!|"c")
+     "before hitting the layer boundary. The length of this path is"
+     mathDisplay' $ "d"!|"dcrit"
+           =: "D"`cdot`sqrt(1 + brak(tan(theta!|"c"))^:2)
+     "and in between the points of critical refraction there is a distance of"
+     mathDisplay $ "d"!|"bcrit"
+           =: "x" - 2`cdot`"x"!|"dcrit"
+     "at the speed of the lower layer, rendering the travel time as"
+     mathDisplay'' $ "t"!|"crit"
+           =: 2`cdot`"d"!|"dcrit"/"v"!:1 + "d"!|"bcrit"/"v"!:2
+           =: 2`cdot`"D"`cdot`sqrt(1 + brak(tan(theta!|"c"))^:2)/"v"!:1
+                 + ("x" - "D"`cdot`tan(theta!|"c"))/"v"!:2
+   let travTimeDire _ v₁ _ x = x/v₁
+       travTimeRefl d v₁ _ x = 2*sqrt(d^2 + (x/2)^2)/v₁
+       travTimeCrit d v₁ v₂ x = let ϑc = asin (v₁/v₂)
+                            in 2*d*sqrt(1 + tan ϑc^2)/v₁ + (x - d*tan ϑc^2)/v₂
    taskNo 2 "" $ do
-      "These stations registered the earthquake at times">>newline
-      forM_ seisStations $ \(SeisStation name _ tp ts) -> do
-         fromString name >> ": "
-         math ("t"!|"p" =: "5:19:">>withUncertainty tp) >> " h , "
-         math ("t"!|"s" =: "5:19:">>withUncertainty ts) >> " h"
-         newline
-   taskNo 3 "" $ do
-      "The wave travel times obey"
-      mathDisplay $ "t"!|"s" - "t"!:0 =: "R"/"v"!|"s"
-      mathDisplay $ "t"!|"p" - "t"!:0 =: "R"/"v"!|"p"
-      "The time ">>math("t"!:0)>>" of the earthquake itself is not known, but the"
-      " difference between P- and S-wave arrival is ">>math tau>>"."
-      " Consider the difference of the above equations:"
-      mathDisplay $ "R"/"v"!|"s" - "R"/"v"!|"p"
-                    =: "t"!|"s" - "t"!:0 - brak("t"!|"p" - "t"!:0)
-                    =: "t"!|"s" - "t"!|"p"
-                    =: tau
-      mathDisplay $ "v"!|"p" * "v"!|"s" * tau
-                    =: "R"*"v"!|"p" - "R"*"v"!|"s"
-                    =: "R"*brak("v"!|"p" - "v"!|"s")
-      mathDisplay $ "R" =: tau * (("v"!|"p" * "v"!|"s")/("v"!|"p" - "v"!|"s"))
-      "In an ideal elastic medium,"
-      mathDisplay $ "v"!|"s" =: "v"!|"p" / sqrt 3
-      "so"
-      mathDisplay $ "R" =: tau * (("v"!|"p"^:2)/("v"!|"p"`cdot`sqrt 3 - "v"!|"p"))
-                        =: tau * ("v"!|"p"/(sqrt 3 - 1))
-   taskNo 4 "" $ do
-      "To infer propagated errors through a formula, consider the usuall Gaussian"
-      " error propagation for statistically independent deviations."
-   taskNo 5 "" $ do
-      let vp = 6000 :± 500
-      "Assume now ">>math("v"!|"p" =: withUncertainty vp *|: "m"/"s")>>"."
-      " This gives rise to the following distances of the stations from the epicenter:"
-      newline
-      forM_ seisStations $ \(SeisStation name _ tp ts) -> do
-         fromString name >> ": "
-         let r = vp * (ts - tp) / (sqrt 3 - 1)
-         math $ "R" =: withUncertainty r *|: "m"
-         ", or ">>math (withUncertainty (distToPx r) *|: "Px")>>"."
-         newline
-   taskNo 6 "" $ do
-      "Graphically intersecting the circles of these distances from the stations gives"
-      " an epicenter location of ("
-      let (coX, coY) = px2coords (461.27:±15, 98.3:±13)
-      math (showLatitude coY) >> ", " >> math (showLongitude coX) >> ")."
+--      liftIO $ plotWindow [ continFnPlot (travTimeDire 40 6 8) & legendName "direct"
+--                          , continFnPlot (travTimeRefl 40 6 8) & legendName "reflected"
+--                          , continFnPlot (travTimeCrit 40 6 8) & legendName "critical" ]
+     includegraphics [IGScale 0.8] "Ex4/Traveltimes.png"
+     "Since both the direct and critically reflected wave have an affine travel time,"
+     " the takeover distance can easily be calculated."
+     mathDisplay $ "t"!|"direct" =: "t"!|"crit"
+     mathDisplay $ "x"!|"tkovr"/"v"!:1
+              =: 2`cdot`"D"`cdot`sqrt(1 + brak(tan(theta!|"c"))^:2)/"v"!:1
+                 + ("x"!|"tkovr" - "D"`cdot`tan(theta!|"c"))/"v"!:2
+     mathDisplay $ "x"!|"tkovr"`cdot`"v"!:2
+              =: 2`cdot`"D"`cdot`sqrt(1 + brak(tan(theta!|"c"))^:2)`cdot`"v"!:2
+                 + ("x"!|"tkovr" - "D"`cdot`tan(theta!|"c"))`cdot`"v"!:1
+     mathDisplay $ "x"!|"tkovr"`cdot`("v"!:2 - "v"!:1)
+              =: 2`cdot`"D"`cdot`sqrt(1 + brak(tan(theta!|"c"))^:2)`cdot`"v"!:2
+                 - "D"`cdot`tan(theta!|"c")`cdot`"v"!:1
+     mathDisplay $ "x"!|"tkovr"
+              =: ( 2`cdot`"D"`cdot`sqrt(1 + brak(tan(theta!|"c"))^:2)`cdot`"v"!:2
+                  - "D"`cdot`tan(theta!|"c")`cdot`"v"!:1
+                 ) /("v"!:2 - "v"!:1)
       
-      
-data SeisStation = SeisStation {
-        seisStat_Name :: String
-      , seisStat_location :: (Uncertain Latitude, Uncertain Longitude)
-      , seisStat_tp, seisStat_ts :: Uncertain Time
-      }
-
-type Distance = ℝ -- in m
-
-type Speed = ℝ -- in m/s
-
-type Time = ℝ -- in seconds after 5:19 on the day of the earthquake
-
-type Px = Double
-
-coords2px :: (Uncertain Latitude, Uncertain Longitude) -> (Uncertain Px, Uncertain Px)
-px2coords :: (Uncertain Px, Uncertain Px) -> (Uncertain Latitude, Uncertain Longitude)
-(coords2px, px2coords)
-         = (\(cy,cx) -> ( px + (cx-ex)*(qx-px)/(fx-ex), py + (cy-ey)*(qy-py)/(fy-ey) )
-           ,\(tx,ty) -> ( ey + (ty-py)*(fy-ey)/(qy-py), ex + (tx-px)*(fx-ex)/(qx-px) ) )
- where [((px,py), (ey,ex)), ((qx,qy),(fy,fx))]
-         = [ ((185.64, 138.09), (exactly 50.5°N, 6°E))
-           , ((585.94, 453.91), (exactly 51.5°N, 8°E)) ]
-
-distToPx :: Uncertain Distance -> Uncertain Px
-distToPx = (*146.92) . (/exactly 50e+3)
-
-seisStations :: [SeisStation]
-seisStations = [ SeisStation "BGG" (50.206°N, 7.337°E) (7.55:±0.1)  (10.15:±0.1)
-               , SeisStation "BNS" (50.964°N, 7.176°E) (14.75:±0.1) (21.95:±0.2)
-               , SeisStation "KLL" (50.647°N, 6.312°E) (17.1:±0.25) (27.5:±1.1)
-               , SeisStation "ROD" (51.145°N, 6.181°E) (23.7:±0.23) (38.2:±0.5)
-               , SeisStation "STB" (50.594°N, 6.840°E) (11.45:±0.2) (16.57:±0.3) ]
+     return ()
 
 
 
