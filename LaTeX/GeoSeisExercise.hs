@@ -26,8 +26,9 @@ module LaTeX.GeoSeisExercise
                , printf, showInTeX
                , ℝ
                , levMarFit
-               , Latitude, Longitude, (°), LatitudeDirection(..), LongitudeDirection(..)
-                    , showLatitude, showLongitude
+               , Angle, Azimuth, Dip, Latitude, Longitude
+               , (°), LatitudeDirection(..), LongitudeDirection(..), AngleDirection(..)
+                    , showAngle, showLatitude, showLongitude
                ) where
 
 import Text.LaTeX hiding ((&))
@@ -193,6 +194,7 @@ levMarFit f ps = map (uncurry(:±)) . fst
 
 data LatitudeDirection = N | S
 data LongitudeDirection = E | W
+data AngleDirection = R | L
 
 class CoordDirection d where
   (°) :: Floating r => r -> d -> r
@@ -201,14 +203,22 @@ instance CoordDirection LatitudeDirection where
   θ°N = θ*pi/180; θ°S = - θ*pi/180
 instance CoordDirection LongitudeDirection where
   λ°E = λ*pi/180; λ°W = - λ*pi/180
+instance CoordDirection AngleDirection where
+  α°R = α*pi/180; α°L = - α*pi/180
+        
+type Angle = ℝ
+type Latitude = Angle
+type Longitude = Angle
+type Azimuth = Angle
+type Dip = Angle
 
-type Latitude = ℝ
-type Longitude = ℝ
+showAngle :: Uncertain Angle -> ExerciseSnippet ()
+showAngle α = withUncertainty (α*180/pi) >> ""^:(circ"""")
   
 showLatitude :: Uncertain Latitude -> ExerciseSnippet ()
-showLatitude θ | θ>0  = withUncertainty (θ*180/pi) >> ""^:(circ"""") >> physU "N"
+showLatitude θ | θ>0  = showAngle θ >> physU "N"
 showLongitude :: Uncertain Longitude -> ExerciseSnippet ()
-showLongitude λ | λ>0  = withUncertainty (λ*180/pi) >> ""^:(circ"""") >> physU "E"
+showLongitude λ | λ>0  = showAngle λ >> physU "E"
 
 -- | Display an equation and followed by a comma.
 mathDisplay' :: LaTeXC r => r -> r
