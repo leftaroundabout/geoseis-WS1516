@@ -1,0 +1,8 @@
+EQ1
+
+FP1
+- Strike (40 ± 9)°
+- Dip (61 ± 4)°
+FP2
+- Strike (4 ± 5)°
+- Dip (33 ± 5)°
