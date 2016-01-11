@@ -6,3 +6,14 @@ FP1
 FP2
 - Strike (4 ± 5)°
 - Dip (33 ± 5)°
+
+T
+- azimuth: 296°
+- plunge: 16°
+
+P
+- azimuth: 164°
+- plunge: 68°
+
+Slip direction (274.5 ± 5)°
+- \lambda = this - azimuth of FP 1

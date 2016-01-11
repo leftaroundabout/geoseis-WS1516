@@ -26,7 +26,7 @@ module LaTeX.GeoSeisExercise
                , printf, showInTeX
                , ℝ
                , levMarFit
-               , Angle, Azimuth, Dip, Latitude, Longitude
+               , Angle, angleDifference, Azimuth, Dip, Latitude, Longitude
                , (°), LatitudeDirection(..), LongitudeDirection(..), AngleDirection(..)
                     , showAngle, showLatitude, showLongitude
                ) where
@@ -55,6 +55,7 @@ import qualified Diagrams.Prelude as Dia
 import Data.AffineSpace
 import Data.VectorSpace
 import Data.Ratio
+import Data.List
 
 import qualified Numeric.AD as AD
 import qualified Numeric.GSL.Fitting as GSL
@@ -211,6 +212,13 @@ type Latitude = Angle
 type Longitude = Angle
 type Azimuth = Angle
 type Dip = Angle
+
+angleDifference :: Angle -> Angle -> Angle
+angleDifference α β
+  | δ >  pi    = angleDifference (α-2*pi) β
+  | δ < -pi    = angleDifference (α+2*pi) β
+  | otherwise  = δ
+ where δ = α-β
 
 showAngle :: Uncertain Angle -> ExerciseSnippet ()
 showAngle α = withUncertainty (α*180/pi) >> ""^:(circ"""")
