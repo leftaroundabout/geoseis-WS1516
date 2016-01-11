@@ -14,12 +14,12 @@ import Control.Monad
 main :: ExerciseSheet
 main = mkSolutionSheet $ do
    taskNo 6 "" $ do
-      "For earthquake 1, we find the following fault plane parameters: "
+      "For ">>textbf"earthquake 2">>", we find the following fault plane parameters: "
       " (the uncertainties are obtained from measuring the spread to equivalent"
       " fault-plane models, except for the T- and P axis azimuth and plunge, whose"
-      " uncertainties are only rough estimates)"
+      " uncertainties are only rough estimates.)"
       let eqInfo eq = do
-           " strike"
+           " Strike"
            mathDisplay' $ phiu =: showAngle (eqFaultStrike eq)
            " dip"
            mathDisplay' $ delta =: showAngle (eqFaultDip eq)
@@ -49,10 +49,20 @@ main = mkSolutionSheet $ do
            "which corresponds best to a ">>emph(fromString $ head faultKByLikely)
            ", followed by ">>emph(fromString $ faultKByLikely!!1)>>"."
            newline
-      eqInfo eq1
+      eqInfo eq2
       "Here, ">>math lambda>>" was determined from the (uncertain) absolute direction"
       " of the slip vector, minus the fault-plane azimuth, with the usual uncertainty"
       " propagation."
+      newline
+      "For ">>textbf"earthquake 1">>", the planes dip much steeper."
+      eqInfo eq1
+   taskNo 7 "" $ do
+      "In case of both earthquakes, the choice of which plane is the fault plane was"
+      " made on the presupposition that the fault strikes in north-west direction."
+      " In EQ1, one plane strikes completely latitudinal, which does not match;"
+      " the chosen plane strikes mostly in northern direction, slightly western."
+      " For EQ2, there is a plane with similar strike but completely different dip,"
+      " while the chosen fault plane actually strikes north-west as expected."
       
       
 
@@ -73,7 +83,7 @@ data Earthquake = Earthquake {
 
 eq1, eq2 :: Earthquake
 
-eq1 = q { eqSlipλ = ((274.5 :± 5)°R) - eqFaultStrike q }
+eq2 = q { eqSlipλ = ((274.5 :± 5)°R) - eqFaultStrike q }
  where q = Earthquake {
         eqFaultStrike = (40 :± 9)°R
       , eqFaultDip = (61 :± 4)°R
@@ -86,16 +96,16 @@ eq1 = q { eqSlipλ = ((274.5 :± 5)°R) - eqFaultStrike q }
       , eqSlipλ = 0
       }
          
-eq2 = q { eqSlipλ = ((274.5 :± 5)°R) - eqFaultStrike q }
+eq1 = q { eqSlipλ = ((9.5 :± 3)°R) - eqFaultStrike q }
  where q = Earthquake {
         eqFaultStrike = (10 :± 2)°R
       , eqFaultDip = (79 :± 2)°R
-      , eqFP2Strike = (96 :± 3)°R
+      , eqFP2Strike = (97 :± 3)°R
       , eqFP2Dip = (80 :± 2)°R
-      , eqTAzimuth = (296 :± 5)°R
-      , eqTPlunge = (16 :± 5)°R
-      , eqPAzimuth = (164 :± 5)°R
-      , eqPPlunge = (68 :± 5)°R
+      , eqTAzimuth = (53 :± 5)°R
+      , eqTPlunge = (73 :± 5)°R
+      , eqPAzimuth = (143 :± 5)°R
+      , eqPPlunge = (90 :± 5)°R
       , eqSlipλ = 0
       }
          
