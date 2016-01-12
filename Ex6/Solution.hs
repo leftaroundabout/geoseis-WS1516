@@ -13,6 +13,16 @@ import Control.Monad
 
 main :: ExerciseSheet
 main = mkSolutionSheet $ do
+   figure Nothing . center $ do
+      includegraphics [IGScale 0.5] "Ex6/icelandpartition.pdf"
+      caption "Partition of the measurement points according to the phase measured\
+              \ for two earthquakes in iceland."
+      label "icelandpartition"
+   forM_ [1,2] $ \k -> do
+      figure Nothing . center $ do
+         includegraphics [IGScale 0.5] ("Ex6/eq"<>show k<>"-vectors.pdf")
+         caption $ "Fault plane solution for earthquake "<>fromIntegral k<>"."
+         label $ "eq"<>fromIntegral k<>"fp"
    taskNo 6 "" $ do
       "For ">>textbf"earthquake 2">>", we find the following fault plane parameters: "
       " (the uncertainties are obtained from measuring the spread to equivalent"
@@ -63,6 +73,10 @@ main = mkSolutionSheet $ do
       " the chosen plane strikes mostly in northern direction, slightly western."
       " For EQ2, there is a plane with similar strike but completely different dip,"
       " while the chosen fault plane actually strikes north-west as expected."
+   figure Nothing . center $ do
+      includegraphics [IGScale 0.5] "Ex6/manyquakes.pdf"
+      caption "Some focal mechanisms from the Harvard CMT catalog."
+      label "manyquakes"
       
       
 
