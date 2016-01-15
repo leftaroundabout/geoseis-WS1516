@@ -69,14 +69,16 @@ main = mkSolutionSheet $ do
       " quotient between considered period-times and their corresponding amplification)"
       " to find actual amplification factors for the measured frequencies."
       newline
-      tabular Nothing (replicate 3 CenterColumn) $ do
+      tabular Nothing (replicate 4 CenterColumn) $ do
          "Station" &: math(mathit"Mag"<>mathrm"(SM)")
+                   &: math(mathit"Mag"<>mathrm"(WA)")
                    &: math((mathit"Mag"<>mathrm"(SM)")/(mathit"Mag"<>mathrm"(WA)"))
          lnbk<>hline
          forM_ polandEQMeasure $ \(statName, m) -> do
             let fkt = amplificationFactors $ oscPeriodOfMaxAmpl m
             fromString statName
                    &: math (withUncertainty $ mag_SM fkt)
+                   &: math (withUncertainty $ mag_WA fkt)
                    &: math (withUncertainty $ factor_SMbyWA fkt)
             lnbk
       newline
@@ -85,17 +87,87 @@ main = mkSolutionSheet $ do
       newline
       tabular Nothing (replicate 4 CenterColumn) $ do
          "Station" &: math"A"<>" in nm"
-                   &: math"B(WA)"<>" in cm"
-                   &: math(logBase 10 ("B(WA)"/physU"mm"))
+                   &: math("B"<>mathrm"(WA)")<>" in mm"
+                   &: math(logBase 10 ("B"<>mathrm"(WA)"/physU"mm"))
          lnbk<>hline
          forM_ polandEQMeasure $ \(statName, m) -> do
             let fkt = amplificationFactors $ oscPeriodOfMaxAmpl m
             fromString statName
                    &: math (withUncertainty $ actualAmplitude m/nanometres)
-                   &: math (withUncertainty $ woodAndersonAmplitude m/centimetres)
+                   &: math (withUncertainty $ woodAndersonAmplitude m/millimetres)
                    &: math (withUncertainty . logBase 10
                                  $ woodAndersonAmplitude m/millimetres)
             lnbk
+   taskNo 3 "" $ do
+      "Similarly to the amplification factor, we can interpolate the distance-dependent"
+      " calibration amplitude ">>math("A"!:0)>>" (WRT a Wood-Anderson instrument)"
+      " from a table due to Richter."
+      " We also have given empirical formulas for calculating this value,"
+      " for eastern North America due to Kim (1998)"
+      " and Norway due to Alsaker et.al (1991)."
+      mathDisplay' $ "A"!:(0<>mathrm"Kim")<>brak deltau
+                 =: ( brak(deltau/physU"km")**(-1.45) )`cdot` (10**(-0.11))
+      mathDisplay'' $ "A"!:(0<>mathrm"Alsaker")<>brak"R"
+                 =: ( brak("R"/(17<>physU"km"))**(-0.776) )
+                          `cdot` ( brak(10**0.000902)**(17 - "R"/physU"km") )
+                                  / 100
+      tabular Nothing (replicate 5 CenterColumn) $ do
+         "Station" &: math"R"<>" in km"
+                   &: math(("A"!:(0<>mathrm"Richter"))`cdot`(10**6))
+                   &: math(("A"!:(0<>mathrm"Kim"))`cdot`(10**6))
+                   &: math(("A"!:(0<>mathrm"Alsaker"))`cdot`(10**6))
+         lnbk<>hline
+         forM_ polandEQMeasure $ \(statName, m) -> do
+            let r = hypoDist m
+            fromString statName
+                   &: math (withUncertainty $ r/kilometres)
+                   &: math (withUncertainty $ distanceFactorRichter r*10^6)
+                   &: math (withUncertainty $ distanceFactorKim r*10^6)
+                   &: math (withUncertainty $ distanceFactorAlsaker r*10^6)
+            lnbk
+      newline
+      "This factor influences the amplitude at a station of hypocentral or"
+      " epicentral distance (which we equate, assuming a shallow earthquake)"
+      " proportionally, so to get to the local magnitude we need to compute"
+      mathDisplay'' $ "M"!|"L" =: logBase 10 ((("B"<>mathrm"(WA)")/physU"mm") / "A"!:0)
+      tabular Nothing (replicate 5 CenterColumn) $ do
+         "Station" &: math("B"<>mathrm"(WA)")<>" in mm"
+                   &: math("M"!|"Richter")
+                   &: math("M"!|"Kim")
+                   &: math("M"!|"Alsaker")
+         lnbk<>hline
+         forM_ polandEQMeasure $ \(statName, m) -> do
+            let r = hypoDist m
+                bWA = woodAndersonAmplitude m/millimetres
+            fromString statName
+                   &: math (withUncertainty $ bWA)
+                   &: math (withUncertainty . logBase 10 $ bWA / distanceFactorRichter r)
+                   &: math (withUncertainty . logBase 10 $ bWA / distanceFactorKim r)
+                   &: math (withUncertainty . logBase 10 $ bWA / distanceFactorAlsaker r)
+            lnbk
+   taskNo 4 "" $ do
+      "The results with factors from Kim and Richter agree (just) within the uncertainty"
+      " bounds. Note however that these uncertainties are coupled, so"
+      " actually the discrepancy is significant."
+      " Far more notable is how the distance for Norway expects much less attenuation"
+      " and therefore estimates the seismic event at lower magnitude. Apparently"
+      " geology on both American coasts causes the amplitude to drop faster until"
+      " reaching such distances, than the Scandinavian does."
+      lnbk
+      "Also notable is how different the predictions from both stations are, as already"
+      " evident from the seismograms in that MOX displays a ">>emph"higher">>" amplitude"
+      " despite clearly being further away. This appears to be partly artifact of"
+      " the method of measuring ">>emph"maximum amplitudes">>", which is not a very"
+      " reliable way of classifying magnitude: since the processes are nontrivial and,"
+      " involve substantial dispersion, the phase relations are almost statistical,"
+      " which allows freak transients to be measured that far exceed the RMS amplitude."
+      " But even that seems to be actually higher for the S-waves arriving at MOX than"
+      " at CLL, so probably the source mechanisms actually sheds more energy in the"
+      " direction of the former station."
+   taskNo 8 "" $ do
+      "bla"
+     
+      
       
       
       
@@ -173,6 +245,9 @@ data AmplificationInfo = AmplificationInfo { amplif_T :: Uncertain Time
                                            , mag_SM, mag_WA :: Uncertain ℝ
                                            , factor_SMbyWA :: Uncertain ℝ
                                            }
+
+-- | Special version of interpolation, since we need to carefully calculate
+--   the quotient of the amplification factors.
 amplificationFactors :: Uncertain Time -> AmplificationInfo
 amplificationFactors (rT:±σT) = AmplificationInfo {
            amplif_T = rT:±σT
@@ -182,7 +257,7 @@ amplificationFactors (rT:±σT) = AmplificationInfo {
                             :± abs (δmagSM/magWAinterp - δmagWA*magSMinterp/magWAinterp^2)
                                    * σT/δT
          }
- where ηHi = (rT - expected (amplif_T infHi)) / δT
+ where ηHi = (rT - expected (amplif_T infLo)) / δT
        ηLo = 1 - ηHi
        δT = expected (amplif_T infHi) - expected (amplif_T infLo)
        
@@ -202,3 +277,71 @@ amplificationFactorsDb = [ AmplificationInfo (0.8*seconds) 201000 1600 undefined
                          , AmplificationInfo (1.2*seconds) 180000  950 undefined ]
 
 
+-- | Interpolate between the (ordered in the key, first element) list of (x,y) values.
+interpolation :: [(ℝ,ℝ)] -> Uncertain ℝ -> Uncertain ℝ
+interpolation l (x:±σx) = yInterp :± abs δy * σx/δx
+ where ηHi = (x - xLo) / δx
+       ηLo = 1 - ηHi
+       δx = xHi - xLo
+       δy = yHi - yLo
+       
+       yInterp = yLo*ηLo + yHi*ηHi
+       
+       (xHi,yHi):_ = dropWhile ((<x) . fst) l
+       (xLo,yLo):_ = dropWhile ((>x) . fst) $ reverse l
+
+
+distanceFactorKim :: Uncertain Distance -> Uncertain ℝ
+distanceFactorKim r = (r/kilometres)**exactly(-1.45) * exactly (10**(-0.11))
+            -- Actually works with Δ, not 𝑅. We assume shallow EQ.
+            -- Form given in manual:
+                -- - log₁₀ 𝐴₀ = 1.45*log₁₀ 𝑟 + 0.11   
+                -- 1/𝐴₀ = 10^(1.45*log₁₀ 𝑟) * 10^0.11
+                --      = 𝑟^1.45 * 10^0.11
+
+distanceFactorAlsaker :: Uncertain Distance -> Uncertain ℝ
+distanceFactorAlsaker r = (r/(17*kilometres))**exactly(-0.776)
+                           * exactly(10**0.000902)**(17 - r/kilometres)
+                           / 100
+                -- - log₁₀ 𝐴₀ = 0.776 * log₁₀(𝑅/17) + 0.000902*(𝑅 - 17) + 2.0
+                -- 1/𝐴₀ = 10^(0.776 * log₁₀(𝑅/17)) * 10^(0.000902*(𝑅 - 17)) * 100
+                --      = (r/17)^0.776 * (10^0.000902)^(𝑅 - 17) * 100
+
+distanceFactorRichter :: Uncertain Distance -> Uncertain ℝ
+distanceFactorRichter = interpolation
+                           [ (0*kilometres  , 10**(-1.4) )
+                           , (10*kilometres , 10**(-1.5) )
+                           , (20*kilometres , 10**(-1.7) )
+                           , (30*kilometres , 10**(-2.1) )
+                           , (40*kilometres , 10**(-2.4) )
+                           , (50*kilometres , 10**(-2.6) )
+                           , (60*kilometres , 10**(-2.8) )
+                           , (70*kilometres , 10**(-2.8) )
+                           , (80*kilometres , 10**(-2.9) )
+                           , (90*kilometres , 10**(-3.0) )
+                           , (100*kilometres, 10**(-3.0) )
+                           , (120*kilometres, 10**(-3.1) )
+                           , (140*kilometres, 10**(-3.2) )
+                           , (160*kilometres, 10**(-3.3) )
+                           , (180*kilometres, 10**(-3.4) )
+                           , (200*kilometres, 10**(-3.5) )
+                           , (220*kilometres, 10**(-3.65))
+                           , (240*kilometres, 10**(-3.7) )
+                           , (260*kilometres, 10**(-3.8) )
+                           , (280*kilometres, 10**(-3.9) )
+                           , (300*kilometres, 10**(-4.0) )
+                           , (320*kilometres, 10**(-4.1) )
+                           , (340*kilometres, 10**(-4.2) )
+                           , (360*kilometres, 10**(-4.3) )
+                           , (380*kilometres, 10**(-4.4) )
+                           , (400*kilometres, 10**(-4.5) )
+                           , (420*kilometres, 10**(-4.5) )
+                           , (440*kilometres, 10**(-4.6) )
+                           , (460*kilometres, 10**(-4.6) )
+                           , (480*kilometres, 10**(-4.7) )
+                           , (500*kilometres, 10**(-4.7) )
+                           , (520*kilometres, 10**(-4.8) )
+                           , (540*kilometres, 10**(-4.8) )
+                           , (560*kilometres, 10**(-4.9) )
+                           , (580*kilometres, 10**(-4.9) )
+                           , (600*kilometres, 10**(-4.9) ) ]

@@ -100,7 +100,6 @@ data GPSStation = GPSStation {
 
 type Distance = ℝ -- in km
 type Velo = ℝ -- in mm/yr
-type Px = Double
 
 px2d :: Px -> Uncertain Distance
 px2d px = (px :± 2) ^* (100 / km100)

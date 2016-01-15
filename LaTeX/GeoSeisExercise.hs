@@ -17,7 +17,8 @@ module LaTeX.GeoSeisExercise
                , mkSolutionSheet
                , task, taskNo
                , items
-               , Uncertain(..), withUncertainty, exactly, (±), errorBarsPlot
+               , Uncertain(..), fromRange, withUncertainty, exactly, (±)
+               , errorBarsPlot
                , realNum
                , physU, (*|:)
                , (!|)
@@ -26,6 +27,8 @@ module LaTeX.GeoSeisExercise
                , printf, showInTeX
                , ℝ
                , levMarFit
+               , Iso(..)
+               , Px, px, pixelVsQuantity
                , Angle, angleDifference, Azimuth, Dip, Latitude, Longitude
                , (°), LatitudeDirection(..), LongitudeDirection(..), AngleDirection(..)
                     , showAngle, showLatitude, showLongitude
@@ -105,11 +108,16 @@ instance RealFloat r => Floating (Uncertain r) where
   pi = fromRational 3.141592653589793
   sqrt (x:±σx) = sqrtx :± σx/(2*sqrtx)
    where sqrtx = sqrt x
+  exp (x:±σx) = expx :± expx*σx
+   where expx = exp x
+  log (x:±σx) = log x :± σx/x
 
 instance (RealFloat r) => Read (Uncertain r) where
   readsPrec p s | '.'`elem`s  = first fromRational <$> readFloat s
                 | otherwise   = first fromInteger <$> readsPrec p s
   
+fromRange :: RealFrac r => (r,r) -> Uncertain r
+fromRange (l,r) = (l+r)/2 :± abs(l-r)/2
 
 deciRound :: RealFloat r => Uncertain r -> r
 deciRound (x:±σx) = (*e) . fromIntegral . round $ x / e
@@ -141,6 +149,8 @@ errorBarsPlot ps = plot
                          | (x:±σx, y:±σy) <- ps ]
 
 withUncertainty :: Uncertain Double -> ExerciseSnippet ()
+withUncertainty (a:±0) | ai<-round a, fromIntegral ai==a  = showInTeX ai
+                       | otherwise                        = showInTeX a
 withUncertainty (a:±σ) = a ± σ
 
 mkSolutionSheet :: ExerciseSnippet a -> ExerciseSheet
@@ -244,3 +254,25 @@ class Num b => Brakey b where brak :: b -> b
 instance Brakey Int where brak = id
 instance Brakey Double where brak = id
 instance Monad m => Brakey (LaTeXT m ()) where brak = autoParens
+
+
+
+
+type Px = ℝ
+px = 1 :: Px
+
+data Iso a b = Iso { fwd :: a->b, rev :: b->a }
+
+pixelVsQuantity :: a~Px
+     => ((Px,Px), Uncertain a) -- ^ scale coordinates
+       -> Px         -- ^ zero point
+       -> Iso (Uncertain Px) (Uncertain a)
+pixelVsQuantity ((sclL,sclR), sclRng) zp = Iso f g
+ where f px = (px - realToFrac zp) * μ
+       g qx = realToFrac zp + qx / μ
+       μ = sclRng / realToFrac (sclR-sclL)
+
+
+
+
+
