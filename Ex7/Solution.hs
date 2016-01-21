@@ -165,7 +165,17 @@ main = mkSolutionSheet $ do
       " at CLL, so probably the source mechanisms actually sheds more energy in the"
       " direction of the former station."
    taskNo 8 "" $ do
-      "bla"
+      "For the uttarkasi earthquake, we have given a time difference between P- and"
+      " S-arrival at station MOX of 7 min 27 s. Given is the formula"
+      let (u:_) = uttarkasiMeasure
+      mathDisplay' $ deltau =: brak((tau!|"S" - tau!|"P")/(physU"min") - 2)
+                                `cdot` (10^:circ"""")
+                       =: withUncertainty
+                             ( ( (sgArrive u - pgArrive u)/minutes - 2 )
+                                * 10 ) ^:circ""""
+      " which is similar to the real hypocentral distance according to ISC, of "
+      math $ withUncertainty(exactly 52.76)^:circ""""
+      "."
      
       
       
@@ -186,9 +196,11 @@ mikrometres = millimetres/1000
 nanometres = mikrometres/1000
 kilometres = 1000*metres
 
+data MeasureDirection = North | East | Vert
 
 data EqMeasure = EqMeasure {
-      pnArrive, pgArrive, sgArrive :: Uncertain Time
+      eqMeasDir :: MeasureDirection
+    , pnArrive, pgArrive, ppArrive, sgArrive :: Uncertain Time
     , hypoDist :: Uncertain Distance
     , measuredAmplitude
       , actualAmplitude
@@ -200,8 +212,10 @@ data EqMeasure = EqMeasure {
 polandEQMeasure :: [(String, EqMeasure)]
 polandEQMeasure = second completeMeasure
         <$> [ ( "CLL"
-              , EqMeasure { pnArrive = px2Time $ fromRange (236.9, 244.5)
+              , EqMeasure { eqMeasDir = Vert
+                          , pnArrive = px2Time $ fromRange (236.9, 244.5)
                           , pgArrive = px2Time $ fromRange (259.1, 270.7)
+                          , ppArrive = undefined
                           , sgArrive = px2Time $ fromRange (404.8, 416.7)
                           , measuredAmplitude
                             = ( px2Displacement (fromRange (441.4, 442.7))
@@ -215,7 +229,8 @@ polandEQMeasure = second completeMeasure
                           , hypoDist = undefined -- obtained with `completeMeasure`
                           } )
             , ( "MOX"
-              , EqMeasure { pnArrive = px2Time $ fromRange (327.3, 333.4)
+              , EqMeasure { eqMeasDir = Vert
+                          , pnArrive = px2Time $ fromRange (327.3, 333.4)
                           , pgArrive = px2Time $ fromRange (372.8, 379.3)
                           , sgArrive = px2Time $ fromRange (603.6, 616.7)
                           , measuredAmplitude
@@ -239,6 +254,10 @@ polandEQMeasure = second completeMeasure
         where (mag,fact) = (mag_SM&&&factor_SMbyWA)
                            . amplificationFactors $ oscPeriodOfMaxAmpl m
                              
+uttarkasiMeasure :: [EqMeasure]
+uttarkasiMeasure = [ EqMeasure { eqMeasDir = East
+                               , pgArrive = 0*seconds
+                               , sgArrive = 7*minutes + 27*seconds } ]
 
 
 data AmplificationInfo = AmplificationInfo { amplif_T :: Uncertain Time
